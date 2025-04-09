@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YOLOv5 Object Detection</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 0;
+            padding: 0;
+        }
+        canvas, video {
+            margin-top: 20px;
+            border: 1px solid black;
+        }
+        button {
+            margin-top: 20px;
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: green;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: darkgreen;
+        }
+    </style>
+</head>
+<body>
+    <h1>YOLOv5 Object Detection</h1>
+    <video id="webcam" autoplay playsinline width="640" height="480"></video>
+    <canvas id="output" width="640" height="480"></canvas>
+    <br>
+    <button id="startButton">Start Detection</button>
+
+    <script>
+        const video = document.getElementById('webcam');
+        const canvas = document.getElementById('output');
+        const ctx = canvas.getContext('2d');
+        let model;
+
+        // 웹캠 시작
+        async function startWebcam() {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            video.srcObject = stream;
+        }
+
+        // 객체 인식 시작
+        async function startDetection() {
+            if (!model) {
+                alert("Model is not loaded yet. Please wait.");
+                return;
+            }
+
+            // 실시간 객체 인식
+            async function detectFrame() {
+                const predictions = await model.detect(video);
+
+                // 캔버스 초기화
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+                // 바운딩 박스 그리기
+                predictions.forEach(prediction => {
+                    const [x, y, width, height] = prediction.bbox;
+                    ctx.strokeStyle = "green";
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(x, y, width, height);
+                    ctx.font = "16px Arial";
+                    ctx.fillStyle = "green";
+                    ctx.fillText(
+                        `${prediction.class} (${(prediction.score * 100).toFixed(1)}%)`,
+                        x,
+                        y > 10 ? y - 5 : 10
+                    );
+                });
+
+                requestAnimationFrame(detectFrame);
+            }
+
+            detectFrame();
+        }
+
+        // 모델 로드
+        async function loadModel() {
+            model = await cocoSsd.load();
+            alert("Model loaded successfully!");
+        }
+
+        // 이벤트 리스너
+        document.getElementById('startButton').addEventListener('click', startDetection);
+
+        // 초기화
+        startWebcam();
+        loadModel();
+    </script>
+</body>
+</html>
